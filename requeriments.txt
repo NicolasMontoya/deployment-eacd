@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+pyjwt
+faunadb
+bcrypt
+python-dotenv
+pytz
