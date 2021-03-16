@@ -14,12 +14,13 @@ indexes = client.query(q.paginate(q.indexes()))
 
 print(indexes) # Returns an array of all index created for the database.
 
-class Dataset:
+class BaseConnection:
 
-    def __init__(self) -> None:
-        self.collection = q.collection('datasets')
+    def __init__(self, collection) -> None:
+        self.collection_name = collection
+        self.collection = q.collection(collection)
 
-    def create_dataset(self, data) -> Dict[str, str]:
+    def create(self, data) -> Dict[str, str]:
         new_data = client.query(
             q.create(
                 self.collection,
@@ -28,12 +29,12 @@ class Dataset:
         ) 
         return new_data['data']
 
-    def update_dataset(self, id, data):
+    def update(self, id, data):
         try:
             return client.query(
                 q.update(
                     q.select("ref", q.get(
-                        q.match(q.index("dataset_by_id"), id)
+                        q.match(q.index(self.collection_name + "_by_id"), id)
                     )),
                     {'data': {**data, 'last_updated_date': datetime.now(pytz.utc)}}
                 )
@@ -41,11 +42,11 @@ class Dataset:
         except NotFound:  
             return 'Not found'
 
-    def get_datasets(self):
+    def get(self):
         try:
             datasets = client.query(
                 q.paginate(
-                    q.match(q.index("all_datasets"))
+                    q.match(q.index("all_"+ self.collection_name ))
                 )
             )
             return [
@@ -57,11 +58,19 @@ class Dataset:
         except NotFound:
             return None
 
-    def get_dataset(self, id):
+    def get_by_id(self, id):
         try:
             dataset = client.query(
-                q.get(q.match(q.index("dataset_by_id"), id))
+                q.get(q.match(q.index(self.collection_name +"_by_id"), id))
             )
         except NotFound:
             return None
         return None if dataset.get('errors') else dataset['data']
+
+class Dataset(BaseConnection):
+    def __init__(self):
+        super().__init__('datasets')
+
+class Model(BaseConnection):
+    def __init__(self):
+        super().__init__('models')

@@ -44,10 +44,15 @@ class Model(BaseModel):
     hiper_params: Any = Field(None, title="Hiper parameters model")
     library: str = Field(None, title="Library model")
     model_library_name: str = Field( None, title="Library model")
-    url: datetime = Field(None, title="Ubication url")
+    url: str = Field(None, title="Ubication url")
     state: str = Field(None, title="State of the model")
-    created_date: datetime = Field(None, title="Creation date")
-
+class ModelOutput(Model):
+    '''
+    Schema of model
+    '''
+    id: str = Field(None, title='Unique identifier')
+    created_date: Any = Field(None, title="Creation date")
+    last_updated_date: Any = Field(None, title="Modification date")
 class Prediction(BaseModel):
     '''
     Schema of data returned when a new user is created. Contains name, email, and id
