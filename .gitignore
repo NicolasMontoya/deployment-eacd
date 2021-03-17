@@ -127,6 +127,7 @@ pythonenv*
 # VSCode
 .vscode
 app/datasets/*
+app/models/*
 
 # Rope project settings
 .ropeproject
