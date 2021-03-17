@@ -45,7 +45,8 @@ class Model(BaseModel):
     library: str = Field(None, title="Library model")
     model_library_name: str = Field( None, title="Library model")
     url: str = Field(None, title="Ubication url")
-    state: str = Field(None, title="State of the model")
+    state: str = Field(None, title="State of the model"),
+    dataset: str = Field(None, title="dataset")
 class ModelOutput(Model):
     '''
     Schema of model
