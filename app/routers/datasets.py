@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 from fastapi.params import Body
 
 from pydantic.fields import Field
@@ -7,6 +7,7 @@ from app.models.schema import Dataset, DatasetOutput
 from fastapi import APIRouter, status, HTTPException
 from fastapi.responses import Response
 from ..models import database
+from ..services.model_service import download_dataset
 
 router = APIRouter()
 
@@ -35,8 +36,10 @@ async def read_dataset_by_id(dataset_id: str):
 @router.post(base_url, tags=["datasets"], response_model=DatasetOutput, status_code=status.HTTP_201_CREATED)
 async def create_dataset(dataset: Dataset):
     try:
-        dataset = database.Dataset().create(data=dataset.dict())
+        dataset_response: Dict = database.Dataset().create(data=dataset.dict())
+        download_dataset(dataset_response['url'], dataset_response['id'])
     except Exception as e:
+        database.Dataset().delete(dataset_response['id'])
         raise HTTPException(400, detail=str(e))
     return dataset
 

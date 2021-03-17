@@ -41,6 +41,18 @@ class BaseConnection:
             )['data']
         except NotFound:  
             return 'Not found'
+    
+    def delete(self, id):
+        try:
+            return client.query(
+                q.delete(
+                    q.select("ref", q.get(
+                        q.match(q.index(self.collection_name + "_by_id"), id)
+                    ))
+                )
+            )['data']
+        except NotFound:  
+            return 'Not found'
 
     def get(self):
         try:
