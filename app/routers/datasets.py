@@ -41,7 +41,7 @@ async def create_dataset(dataset: Dataset):
     except Exception as e:
         database.Dataset().delete(dataset_response['id'])
         raise HTTPException(400, detail=str(e))
-    return dataset
+    return dataset_response
 
 @router.put(base_url + "/{dataset_id}", tags=["datasets"])
 async def update_dataset(dataset_id: str =Field(..., description='Id of the todo'), data: Dataset =  Body(...)):
