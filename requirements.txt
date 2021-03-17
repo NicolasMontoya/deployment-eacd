@@ -5,3 +5,5 @@ faunadb
 bcrypt
 python-dotenv
 pytz
+sklearn
+joblib
