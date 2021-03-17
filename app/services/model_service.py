@@ -7,9 +7,10 @@ import requests, os, logging
 from sklearn.model_selection import train_test_split
 from joblib import dump
 import pandas as pd
+from io import StringIO
 
 logger = logging.getLogger(__name__) 
-
+REQUIRED_COLUMNS = list(['dteday','season','holiday', 'weekday','workingday','cnt'])
 class TrainerModel:
   def __init__(self, model: Dict, dataset_url: str, params=None) -> None:
     logger.info("starting trainer...")
@@ -51,6 +52,10 @@ def download_dataset(url, dataset_id):
       try:
           req = requests.get(url)
           url_content = req.content
+          df = pd.read_csv(StringIO(url_content.decode("utf-8")))
+          for field in REQUIRED_COLUMNS:
+            if field not in df.columns:
+              raise ValueError("Dataset is not allowed")
           csv_file = open(f'{os.getcwd()}/app/datasets/{dataset_id}.csv', 'wb')
           csv_file.write(url_content)
           csv_file.close()
