@@ -9,11 +9,9 @@ from pydantic.types import PositiveInt
 class ModelType(str, Enum):
      RF = 'RandomForest'
      LR = 'LinearRegression'
-     CT = 'CustomPipeline'
-     BS = 'Baseline'
 
 class EvalMetric(str, Enum):
-     Q2 = 'Square'
+     Q2 = 'R2'
      CT = 'CustomMetric'
 
 class User(BaseModel):
@@ -47,12 +45,12 @@ class Model(BaseModel):
     Schema of the definition model
     '''
     name: str = Field(..., title="Name of the model", max_length=14, min_length=6)
-    type_model: str = Field(..., title="Model type")
-    version: int = Field(..., title="Version of the model")
-    hiper_params: Any = Field(..., title="Hiper parameters model")
+    type_model: ModelType = Field(..., title="Model type")
+    version: int = Field(..., title="Version of the model", gt=0)
+    params: Any = Field(None, title="Parameters models")
+    hiper_params: Any = Field(None, title="Hiper parameters models")
     eval_metric: EvalMetric = Field(..., title="Default metric")
     grid_search: bool = Field(False, title="Search best parameters")
-    url: str = Field(..., title="Ubication url")
     dataset: str = Field(None, title="dataset")
 class ModelOutput(Model):
     '''
@@ -62,4 +60,5 @@ class ModelOutput(Model):
     state: str = Field(None, title="State of the model")
     created_date: Any = Field(None, title="Creation date")
     last_updated_date: Any = Field(None, title="Modification date")
+    score: float = Field(None, title="Model score")
 

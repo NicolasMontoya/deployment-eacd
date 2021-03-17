@@ -5,7 +5,7 @@ from pydantic.fields import Field
 
 from app.models.schema import Model, ModelOutput
 from fastapi import APIRouter, status, HTTPException
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 from ..models import database
 from ..services.model_service import TrainerModel
 
@@ -38,16 +38,18 @@ async def read_model_by_id(model_id: str):
 @router.post(base_url, tags=["models"], response_model=ModelOutput, status_code=status.HTTP_201_CREATED)
 async def create_model(model: Model):
     try:
-        model.state = 'PROGRESS'
         dataset = database.Dataset().get_by_id(model.dataset)
-        model = database.Model().create(data=model.dict())
-        model_ = TrainerModel(model, dataset['url'])
-        presition = model_.train('cnt')
-        model['presition'] = presition
+        if dataset is None:
+            return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content="Dataset is not allowed")
+        dict_ = {**model.dict(), 'state': 'PROGRESS'}
+        model_response = database.Model().create(data=dict_)
+        model_ = TrainerModel(model_response, dataset['url'])
+        presition = model_.train()
+        model_response['score'] = presition
     except Exception as e:
-        database.Model().delete(model['id'])
+        database.Model().delete(model_response['id'])
         raise HTTPException(400, detail=str(e))
-    return model
+    return model_response
 
 @router.put(base_url + "/{model_id}", tags=["models"])
 async def update_model(model_id: str =Field(..., description='Id of the model'), data: Model =  Body(...)):
