@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 from fastapi.params import Body
 
@@ -45,16 +46,28 @@ async def create_model(model: Model):
         model_response = database.Model().create(data=dict_)
         model_ = TrainerModel(model_response, dataset['url'])
         presition = model_.train()
+        dict_ = {**model.dict(), 'state': 'READY', 'score': presition}
+        database.Model().update(model_response['id'], dict_)
         model_response['score'] = presition
     except Exception as e:
         database.Model().delete(model_response['id'])
         raise HTTPException(400, detail=str(e))
     return model_response
 
-@router.put(base_url + "/{model_id}", tags=["models"])
+@router.get(base_url + "/{model_id}", tags=["models"], response_model=ModelOutput, responses={204: {"description": "No content"} } )
+async def model_predict(model_id: str, date: datetime):
+    try:
+        model = database.Model().get_by_id(model_id) 
+    except Exception as e:
+        raise HTTPException(400, detail=str(e))
+    if not model:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return  model
+
+@router.delete(base_url + "/{model_id}", tags=["models"])
 async def update_model(model_id: str =Field(..., description='Id of the model'), data: Model =  Body(...)):
     try:
-        model = database.Model().update(model_id, data.dict())
+        model = database.Model().delete(model_id)
     except Exception as e:
         raise HTTPException(400, detail=str(e))
     return  model
