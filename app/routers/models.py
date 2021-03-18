@@ -3,12 +3,13 @@ from typing import List
 from fastapi.params import Body
 
 from pydantic.fields import Field
+import pytz
 
-from app.models.schema import Model, ModelOutput
+from app.models.schema import Model, ModelOutput, PredictOutput
 from fastapi import APIRouter, status, HTTPException
 from fastapi.responses import Response, JSONResponse
 from ..models import database
-from ..services.model_service import TrainerModel
+from ..services.model_service import TrainerModel, predict
 
 
 router = APIRouter()
@@ -54,18 +55,22 @@ async def create_model(model: Model):
         raise HTTPException(400, detail=str(e))
     return model_response
 
-@router.get(base_url + "/{model_id}", tags=["models"], response_model=ModelOutput, responses={204: {"description": "No content"} } )
-async def model_predict(model_id: str, date: datetime):
+@router.get(base_url + "/predict/{model_id}", tags=["models"], response_model=PredictOutput, responses={204: {"description": "No content"} } )
+async def model_predict(model_id: str, hour: int, year: int, month: int, day: int):
     try:
         model = database.Model().get_by_id(model_id) 
+        output = {}
+        output['score'] = model['score']
+        output['eval_metric'] = model['eval_metric']
+        date = datetime(year, month, day, hour)
+        output['datetime'] = str(date)
+        output['predict'] = predict(date, model)
     except Exception as e:
         raise HTTPException(400, detail=str(e))
-    if not model:
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
-    return  model
+    return  output
 
 @router.delete(base_url + "/{model_id}", tags=["models"])
-async def update_model(model_id: str =Field(..., description='Id of the model'), data: Model =  Body(...)):
+async def update_model(model_id: str =Field(..., description='Id of the model')):
     try:
         model = database.Model().delete(model_id)
     except Exception as e:

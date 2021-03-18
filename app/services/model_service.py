@@ -1,8 +1,8 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Dict
 from faunadb.errors import HttpError
 import requests, os, logging
-from joblib import dump
+from joblib import dump, load
 import pandas as pd
 from io import StringIO
 from random import randint
@@ -23,14 +23,15 @@ REQUIRED_COLUMNS = list(['season','yr','mnth','hr','holiday','weekday','workingd
 PROCESS_COLUMNS = list(['season','yr','mnth','hr','holiday','weekday','workingday','weathersit','temp','atemp','hum','windspeed'])
 class TrainerModel:
 
-  def __init__(self, model: Dict, dataset_url: str, hiper_params=None, params=None) -> None:
+  def __init__(self, model: Dict, dataset_url: str) -> None:
     self.model_definition = model
     self.dataset_url = dataset_url
-    self.define_model(model, hiper_params, params)
+    self.define_model(model)
     download_dataset(dataset_url, model['dataset'])
 
-  def define_model(self, model, hiper_params, params):
-    if model['type_model'] == 'RF':
+  def define_model(self, model):
+    params = model['params'] if 'params' in model else None
+    if model['type_model'] == 'RandomForest':
       if params == None:
         model_ = RandomForestRegressor()
       else:
@@ -46,11 +47,11 @@ class TrainerModel:
       ("scaler", StandardScaler()),
       ("model", model_)
     ])
-    if model['grid_search'] == True and model['hiper_params'] is not None:
+    if model['grid_search'] == True and 'hiper_params'in model:
       self.model = GridSearchCV(
-        estimator=model_, param_grid={**hiper_params}, scoring=self.get_eval()
+        estimator=model_, param_grid={**model['hiper_params']}, scoring=self.get_eval()
       )
-    elif model['grid_search'] == True and model['hiper_params'] is None:
+    elif model['grid_search'] == True and 'hiper_params' not in model:
       raise ValueError('You need to include hiper_params, if you select grid_search')
     else:
       self.model = model_
@@ -61,7 +62,7 @@ class TrainerModel:
     else:
       return make_scorer(self.bike_number_error)
   
-  def bike_number_error(y_true, y_pred, understock_price=0.3, overstock_price=0.7):
+  def bike_number_error(self, y_true, y_pred, understock_price=0.3, overstock_price=0.7):
     error = y_true - y_pred
     return sum(map(lambda err: overstock_price*err*(-1) if err < 0 else understock_price*err , error)) / len(error)
 
@@ -81,9 +82,12 @@ class TrainerModel:
     return mean_absolute_error(y_test, self.model.predict(X_test))
 
   def load_dataset(self):
-    url = f"{os.getcwd()}/app/datasets/{self.model_definition['dataset']}.csv"
+    return load_dataset(self.model_definition, self.dataset_url)
+
+def load_dataset(model_definition, dataset_url=None):
+    url = f"{os.getcwd()}/app/datasets/{model_definition['dataset']}.csv"
     if not os.path.exists(url):
-      download_dataset(self.dataset_url, self.model_definition['dataset'])
+      download_dataset(dataset_url, model_definition['dataset'])
     df = pd.read_csv(url)
     df['datetime'] =  pd.to_datetime(df['dteday']) + df['hr'].apply(pd.Timedelta, unit='h')
     df_time = df.set_index('datetime')
@@ -129,7 +133,10 @@ def clean_dataframe(df):
                   if start <= now <= end)
 
   for index in null_indexes:
-    df_imp.loc[index, ['hr', 'yr', 'mnth']] = (index.hour, int(index.year == 2012), index.month)
+    df_imp.hr.loc[index] = index.hour
+    df_imp.yr.loc[index] = int(index.year == 2012)
+    df_imp.mnth.loc[index] = index.month
+
     df_imp.holiday.loc[index] = int(index in holidays.UnitedStates())
     df_imp.weekday.loc[index]  = index.dayofweek
     df_imp.workingday.loc[index]  = int(index.dayofweek in [0,1,2,3,4])
@@ -154,3 +161,38 @@ def clean_dataframe(df):
 
   df_imp.cnt =  df_imp.casual + df_imp.registered
   return df_imp
+
+def predict(date: datetime, model):
+  df = load_dataset(model)
+  final_data_pred = df.copy()
+
+  if date in df.index:
+    return df.cnt[date]
+
+  final = date - final_data_pred.index[-1]
+
+  final_data_ = final_data_pred.reindex(pd.date_range(
+          start=final_data_pred.index[0],
+          end=final_data_pred.index[-1] + final,
+          freq='1H'
+      )
+  )
+  model_id = model['id']
+  clf = load(f'{os.getcwd()}/app/models/ml/{model_id}') 
+
+  null_indexes = final_data_[final_data_.isna().any(axis=1)].index
+
+  for index in null_indexes:
+    final_data_.loc[index, ['hr', 'yr', 'mnth']] = (index.hour, int(index.year == 2012), index.month)
+    final_data_.holiday.loc[index] = int(index in holidays.UnitedStates())
+    final_data_.weekday.loc[index]  = index.dayofweek
+    final_data_.workingday.loc[index]  = int(index.dayofweek in [0,1,2,3,4])
+    final_data_.season.loc[index]  = 1
+    final_data_.weathersit.loc[index]  = randint(1, 4)
+    final_data_.temp.loc[index] = np.random.uniform(final_data_.temp.min(), final_data_.temp.max())
+    final_data_.atemp.loc[index] = np.random.uniform(final_data_.atemp.min(), final_data_.atemp.max())
+    final_data_.hum.loc[index] = np.random.uniform(final_data_.hum.min(), final_data_.hum.max())
+    final_data_.windspeed.loc[index] = np.random.uniform(final_data_.windspeed.min(), final_data_.windspeed.max())
+    ten_hours_before = index - timedelta(hours=10)
+    final_data_.cnt.loc[index] = clf.predict(final_data_[ten_hours_before:index])[-1]
+  return final_data_.cnt[-1]

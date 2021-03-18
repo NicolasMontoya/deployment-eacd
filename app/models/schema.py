@@ -11,8 +11,8 @@ class ModelType(str, Enum):
      LR = 'LinearRegression'
 
 class EvalMetric(str, Enum):
-     Q2 = 'R2'
-     CT = 'CustomMetric'
+     Q2 = 'DEFAULT'
+     CT = 'CUSTOM'
 
 class User(BaseModel):
     '''Base User schema'''
@@ -61,4 +61,13 @@ class ModelOutput(Model):
     created_date: Any = Field(None, title="Creation date")
     last_updated_date: Any = Field(None, title="Modification date")
     score: float = Field(None, title="Model score")
+
+class PredictOutput(BaseModel):
+    '''
+    Schema of model
+    '''
+    eval_metric: EvalMetric = Field(..., title="Model metric")
+    score: float = Field(None, title="Model score")
+    datetime: str = Field(None, title="Date input")
+    predict: float = Field(None, title="Prediction")
 

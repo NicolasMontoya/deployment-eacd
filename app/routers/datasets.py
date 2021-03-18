@@ -43,10 +43,10 @@ async def create_dataset(dataset: Dataset):
         raise HTTPException(400, detail=str(e))
     return dataset_response
 
-@router.put(base_url + "/{dataset_id}", tags=["datasets"])
-async def update_dataset(dataset_id: str =Field(..., description='Id of the todo'), data: Dataset =  Body(...)):
+@router.delete(base_url + "/{dataset_id}", tags=["datasets"])
+async def update_dataset(dataset_id: str =Field(..., description='Id of the todo')):
     try:
-        dataset = database.Dataset().update(dataset_id, data.dict())
+        dataset = database.Dataset().delete(dataset_id)
     except Exception as e:
         raise HTTPException(400, detail=str(e))
     return  dataset
