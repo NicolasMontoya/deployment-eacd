@@ -13,6 +13,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import make_scorer
+from sklearn.metrics import mean_absolute_error
 import numpy as np
 import holidays
 
@@ -54,9 +55,9 @@ class TrainerModel:
     else:
       self.model = model_
 
-  def get_eval(self, metric):
-    if metric == 'Square':
-      return 'r2'
+  def get_eval(self):
+    if self.model_definition['eval_metric'] == 'DEFAULT':
+      return 'mean_absolute_error'
     else:
       return make_scorer(self.bike_number_error)
   
@@ -75,7 +76,9 @@ class TrainerModel:
 
     self.model.fit(X_train, y_train)
     dump(self.model, f"{os.getcwd()}/app/models/ml/{self.model_definition['id']}")
-    return self.model.score(X_test, y_test)
+    if self.model_definition['eval_metric'] == 'CUSTOM':
+      return self.bike_number_error(y_test, self.model.predict(X_test))
+    return mean_absolute_error(y_test, self.model.predict(X_test))
 
   def load_dataset(self):
     url = f"{os.getcwd()}/app/datasets/{self.model_definition['dataset']}.csv"
