@@ -7,3 +7,5 @@ python-dotenv
 pytz
 sklearn
 joblib
+pandas
+holidays
