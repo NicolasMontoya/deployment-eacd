@@ -86,3 +86,7 @@ class Dataset(BaseConnection):
 class Model(BaseConnection):
     def __init__(self):
         super().__init__('models')
+
+class Prediction(BaseConnection):
+    def __init__(self):
+        super().__init__('predictions')

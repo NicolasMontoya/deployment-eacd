@@ -6,6 +6,7 @@ from joblib import dump, load
 import pandas as pd
 from io import StringIO
 from random import randint
+from ..models import database
 from .helpers import FeatureEngineering, FeatureSelectHelper
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import GridSearchCV
@@ -195,4 +196,5 @@ def predict(date: datetime, model):
     final_data_.windspeed.loc[index] = np.random.uniform(final_data_.windspeed.min(), final_data_.windspeed.max())
     ten_hours_before = index - timedelta(hours=10)
     final_data_.cnt.loc[index] = clf.predict(final_data_[ten_hours_before:index])[-1]
+  database.Prediction().create({'date': str(final_data_pred.index[-1] + final), 'prediction': final_data_.cnt.loc[index]})
   return final_data_.cnt[-1]

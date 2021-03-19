@@ -1,9 +1,7 @@
 from datetime import datetime
 from typing import List
-from fastapi.params import Body
 
 from pydantic.fields import Field
-import pytz
 
 from app.models.schema import Model, ModelOutput, PredictOutput
 from fastapi import APIRouter, status, HTTPException
